@@ -1,0 +1,185 @@
+package javaapplication1.ui;
+
+import javaapplication1.dao.ImovelDAO;
+import javaapplication1.dao.VisitaDAO;
+import javaapplication1.model.Cliente;
+import javaapplication1.model.Imovel;
+import javaapplication1.model.Visita;
+
+import javax.swing.*;
+import java.awt.*;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+
+public class ClientePanel extends JPanel {
+
+    private JFrame parent;
+    private Cliente cliente;
+    private ImovelDAO imDao = new ImovelDAO();
+    private VisitaDAO vDao = new VisitaDAO();
+    private DefaultListModel<String> modelImoveis = new DefaultListModel<>();
+    private JList<String> listImoveis = new JList<>(modelImoveis);
+    private List<Imovel> imoveis;
+
+    public ClientePanel(JFrame parent, Cliente cliente) {
+        this.parent = parent;
+        this.cliente = cliente;
+
+        setLayout(new BorderLayout());
+
+        // Topo
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(new JLabel("Logado: " + cliente.getEmail() + " (CLIENTE)"), BorderLayout.WEST);
+        JButton btnLogout = new JButton("Sair");
+        top.add(btnLogout, BorderLayout.EAST);
+        add(top, BorderLayout.NORTH);
+
+        // Centro (lista de imóveis)
+        JPanel center = new JPanel(new BorderLayout());
+        try {
+            imoveis = imDao.listAll();
+            for (Imovel im : imoveis) {
+                modelImoveis.addElement(im.toString());
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao carregar imóveis: " + ex.getMessage());
+        }
+        center.add(new JScrollPane(listImoveis), BorderLayout.CENTER);
+
+        // Bottom (botões)
+        JPanel bottom = new JPanel();
+        JButton btnAgendar = new JButton("Agendar visita");
+        JButton btnMinhas = new JButton("Minhas visitas");
+
+        bottom.add(btnAgendar);
+        bottom.add(btnMinhas);
+
+        add(center, BorderLayout.CENTER);
+        add(bottom, BorderLayout.SOUTH);
+
+        // Logout
+        btnLogout.addActionListener(e -> {
+            parent.setContentPane(new LoginPanel(parent));
+            parent.revalidate();
+        });
+
+        // ⏳ ***AGENDAR VISITA — COM DATA + HORÁRIOS FIXOS (parsing tolerante)***
+        btnAgendar.addActionListener(e -> {
+            int sel = listImoveis.getSelectedIndex();
+            if (sel < 0) {
+                JOptionPane.showMessageDialog(this, "Selecione um imóvel.");
+                return;
+            }
+
+            Imovel chosen = imoveis.get(sel);
+
+            // 1) Pergunta a data (entrada livre, vamos tentar vários formatos)
+            String dataStrRaw = JOptionPane.showInputDialog(
+                    this,
+                    "Digite a DATA (formato dd/MM/yyyy)"
+            );
+
+            if (dataStrRaw == null) return; // cancelou
+            String dataStr = dataStrRaw.trim();
+
+            if (dataStr.isBlank()) {
+                JOptionPane.showMessageDialog(this, "Nenhuma data informada.");
+                return;
+            }
+
+            // Tentar parse com vários padrões aceitáveis
+            LocalDate data = null;
+            DateTimeFormatter[] formatos = new DateTimeFormatter[] {
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+                    DateTimeFormatter.ofPattern("d/M/yyyy"),
+                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                    DateTimeFormatter.ofPattern("d-M-yyyy")
+            };
+
+            for (DateTimeFormatter fmt : formatos) {
+                try {
+                    data = LocalDate.parse(dataStr, fmt);
+                    break;
+                } catch (DateTimeParseException ignored) {
+                }
+            }
+
+            if (data == null) {
+                JOptionPane.showMessageDialog(this,
+                        "Erro: data inválida.\nValor recebido: \"" + dataStrRaw + "\"\nUse dd/MM/yyyy (ex: 25/12/2025).");
+                return;
+            }
+
+            // Bloquear datas no passado
+            if (data.isBefore(LocalDate.now())) {
+                JOptionPane.showMessageDialog(this, "Erro: data no passado. Escolha uma data futura.");
+                return;
+            }
+
+            try {
+                // 2) Horários já fixos
+                String[] horarios = {"08:00", "10:00", "14:00", "16:00", "18:00"};
+
+                String horario = (String) JOptionPane.showInputDialog(
+                        this,
+                        "Selecione o horário:",
+                        "Horários disponíveis",
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        horarios,
+                        horarios[0]
+                );
+
+                if (horario == null) return; // cancelou seleção de horário
+
+                // 3) Monta data final para salvar no banco (yyyy-MM-dd HH:mm:ss)
+                String dataHoraString = data.toString() + " " + horario + ":00";
+                LocalDateTime dataHora = LocalDateTime.parse(
+                        dataHoraString,
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                );
+
+                // 4) Envia para o DAO
+                vDao.create(cliente.getId(), chosen.getId(), dataHora);
+
+                JOptionPane.showMessageDialog(this, "Visita agendada (pendente).");
+
+            } catch (Exception ex) {
+                // mostra mensagem direta do erro pra ajudar debug caso ocorra problema com o BD
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Erro ao agendar: " + ex.getMessage()
+                );
+            }
+        });
+
+        // 📋 Minhas visitas
+        btnMinhas.addActionListener(e -> {
+            try {
+                var visitas = vDao.listByCliente(cliente.getId());
+                StringBuilder sb = new StringBuilder();
+
+                DateTimeFormatter f = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+                for (Visita v : visitas) {
+                    sb.append("Id: ").append(v.getId())
+                            .append(" - ").append(v.getDataHora().format(f))
+                            .append(" - ImóvelId: ").append(v.getImovelId())
+                            .append(" - ").append(v.getStatus())
+                            .append("\n");
+                }
+
+                if (sb.length() == 0) sb.append("Nenhuma visita.");
+
+                JOptionPane.showMessageDialog(this, sb.toString());
+
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
+            }
+        });
+    }
+}
