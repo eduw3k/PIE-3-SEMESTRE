@@ -1,0 +1,21 @@
+package javaapplication1.model;
+
+public abstract class Usuario {
+    protected int id;
+    protected String email;
+    protected String senha; // hashed
+
+    public Usuario() {}
+    public Usuario(int id, String email, String senha) {
+        this.id = id; this.email = email; this.senha = senha;
+    }
+
+    public int getId(){ return id; }
+    public String getEmail(){ return email; }
+    public String getSenha(){ return senha; }
+
+    public abstract String getTipo();
+
+    @Override
+    public String toString(){ return getTipo() + "(" + email + ")"; }
+}
