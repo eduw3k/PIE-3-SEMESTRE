@@ -1,0 +1,7 @@
+package javaapplication1.model;
+
+public class Cliente extends Usuario {
+    public Cliente() {}
+    public Cliente(int id, String email, String senha){ super(id,email,senha); }
+    @Override public String getTipo(){ return "CLIENTE"; }
+}
