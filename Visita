@@ -1,0 +1,25 @@
+package javaapplication1.model;
+
+import java.time.LocalDateTime;
+
+public class Visita {
+    public enum Status { PENDENTE, APROVADO, RECUSADO }
+
+    private int id;
+    private int clienteId;
+    private int imovelId;
+    private LocalDateTime dataHora;
+    private Status status;
+
+    public Visita() {}
+    public Visita(int id, int clienteId, int imovelId, LocalDateTime dataHora, Status status){
+        this.id = id; this.clienteId = clienteId; this.imovelId = imovelId; this.dataHora = dataHora; this.status = status;
+    }
+
+    public int getId(){ return id; }
+    public int getClienteId(){ return clienteId; }
+    public int getImovelId(){ return imovelId; }
+    public LocalDateTime getDataHora(){ return dataHora; }
+    public Status getStatus(){ return status; }
+    public void setStatus(Status s){ this.status = s; }
+}
