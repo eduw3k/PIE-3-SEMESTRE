@@ -1,0 +1,41 @@
+package javaapplication1.ui;
+
+import javaapplication1.dao.ImovelDAO;
+import javaapplication1.model.Imovel;
+import javax.swing.*;
+import java.awt.*;
+import java.sql.SQLException;
+import java.util.List;
+
+public class ImovelCrudPanel extends JPanel {
+    private ImovelDAO dao = new ImovelDAO();
+    private DefaultListModel<String> model = new DefaultListModel<>();
+    private JList<String> list = new JList<>(model);
+    public ImovelCrudPanel() {
+        setLayout(new BorderLayout());
+        add(new JScrollPane(list), BorderLayout.CENTER);
+        JPanel bot = new JPanel();
+        JTextField descricao = new JTextField(30);
+        JButton btnAdd = new JButton("Adicionar");
+        JButton btnRefresh = new JButton("Atualizar");
+        bot.add(descricao); bot.add(btnAdd); bot.add(btnRefresh);
+        add(bot, BorderLayout.SOUTH);
+
+        btnAdd.addActionListener(e -> {
+            String d = descricao.getText().trim();
+            if (d.isEmpty()) { JOptionPane.showMessageDialog(this, "Digite descrição."); return; }
+            try { dao.create(d); descricao.setText(""); refresh(); } catch (SQLException ex){ JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage()); }
+        });
+
+        btnRefresh.addActionListener(e -> refresh());
+        refresh();
+    }
+
+    private void refresh() {
+        model.clear();
+        try {
+            List<Imovel> l = dao.listAll();
+            for (Imovel i : l) model.addElement(i.toString());
+        } catch (SQLException ex) { JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage()); }
+    }
+}
