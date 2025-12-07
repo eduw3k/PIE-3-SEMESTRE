@@ -1,0 +1,56 @@
+package javaapplication1.ui;
+
+import javaapplication1.dao.UserDAO;
+import javax.swing.*;
+import java.awt.*;
+import java.sql.SQLException;
+
+public class RegisterPanel extends JPanel {
+    private JFrame parent;
+    private JTextField email;
+    private JPasswordField pass;
+    private JComboBox<String> role;
+
+    public RegisterPanel(JFrame parent){
+        this.parent = parent;
+        setLayout(new GridLayout(7,1,5,5));
+        email = new JTextField();
+        pass = new JPasswordField();
+        role = new JComboBox<>(new String[]{"CLIENTE","CORRETOR"});
+        add(new JLabel("Email:")); add(email);
+        add(new JLabel("Senha:")); add(pass);
+        add(new JLabel("Tipo:")); add(role);
+
+        JPanel p = new JPanel();
+        JButton bCreate = new JButton("Criar conta");
+        JButton bBack = new JButton("Voltar");
+        p.add(bCreate); p.add(bBack);
+        add(p);
+
+        bBack.addActionListener(e -> {
+            parent.setContentPane(new LoginPanel(parent));
+            parent.revalidate();
+        });
+
+        bCreate.addActionListener(e -> {
+            String em = email.getText().trim();
+            String pw = new String(pass.getPassword());
+            String r = (String) role.getSelectedItem();
+            if (em.isEmpty() || pw.isEmpty()) { JOptionPane.showMessageDialog(this, "Preencha todos os campos."); return; }
+            try {
+                UserDAO dao = new UserDAO();
+                if (dao.findByEmail(em).isPresent()) {
+                    JOptionPane.showMessageDialog(this, "Email já cadastrado.");
+                    return;
+                }
+                dao.create(em, pw, r);
+                JOptionPane.showMessageDialog(this, "Cadastro realizado com sucesso.");
+                parent.setContentPane(new LoginPanel(parent));
+                parent.revalidate();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
+            }
+        });
+    }
+}
