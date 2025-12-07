@@ -1,0 +1,73 @@
+package javaapplication1.ui;
+
+import javaapplication1.dao.VisitaDAO;
+import javaapplication1.model.Corretor;
+import javaapplication1.model.Visita;
+import javax.swing.*;
+import java.awt.*;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+public class CorretorPanel extends JPanel {
+    private JFrame parent;
+    private Corretor corretor;
+    private VisitaDAO vDao = new VisitaDAO();
+    private DefaultListModel<String> model = new DefaultListModel<>();
+    private JList<String> list = new JList<>(model);
+    private List<Visita> visitas;
+
+    public CorretorPanel(JFrame parent, Corretor c) {
+        this.parent = parent; this.corretor = c;
+        setLayout(new BorderLayout());
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(new JLabel("Logado: " + c.getEmail() + " (CORRETOR)"), BorderLayout.WEST);
+        JButton btnLogout = new JButton("Sair");
+        top.add(btnLogout, BorderLayout.EAST);
+        add(top, BorderLayout.NORTH);
+
+        add(new JScrollPane(list), BorderLayout.CENTER);
+        JPanel bottom = new JPanel();
+        JButton btnRefresh = new JButton("Atualizar");
+        JButton btnAprovar = new JButton("Aprovar");
+        JButton btnRecusar = new JButton("Recusar");
+        bottom.add(btnRefresh); bottom.add(btnAprovar); bottom.add(btnRecusar);
+        add(bottom, BorderLayout.SOUTH);
+
+        btnLogout.addActionListener(e -> {
+            parent.setContentPane(new LoginPanel(parent)); parent.revalidate();
+        });
+
+        btnRefresh.addActionListener(e -> refresh());
+        btnAprovar.addActionListener(e -> decidir(Visita.Status.APROVADO));
+        btnRecusar.addActionListener(e -> decidir(Visita.Status.RECUSADO));
+
+        refresh();
+    }
+
+    private void refresh() {
+        model.clear();
+        try {
+            visitas = vDao.listAll();
+            DateTimeFormatter f = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            for (Visita v : visitas) {
+                model.addElement("Id:" + v.getId() + " - " + v.getDataHora().format(f) + " - Imovel:" + v.getImovelId() + " - ClienteId:" + v.getClienteId() + " - " + v.getStatus());
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
+        }
+    }
+
+    private void decidir(Visita.Status s) {
+        int sel = list.getSelectedIndex();
+        if (sel < 0) { JOptionPane.showMessageDialog(this, "Selecione uma visita."); return; }
+        Visita v = visitas.get(sel);
+        try {
+            vDao.updateStatus(v.getId(), s);
+            JOptionPane.showMessageDialog(this, "Visita atualizada para " + s);
+            refresh();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
+        }
+    }
+}
