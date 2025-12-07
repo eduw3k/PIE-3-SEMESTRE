@@ -1,0 +1,20 @@
+package javaapplication1.dao;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class Database {
+
+    // Dados do seu servidor Aiven
+    private static final String URL =
+            "jdbc:mysql://mysql-3b649c5-mensal4.g.aivencloud.com:28639/defaultdb" +
+                    "?ssl-mode=REQUIRED";
+
+    private static final String USER = "avnadmin";
+    private static final String PASS = "AVNS_1kRY5ZjY7cKiiKCqbS6";
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASS);
+    }
+}
