@@ -1,0 +1,67 @@
+package javaapplication1.dao;
+
+import javaapplication1.model.*;
+import org.mindrot.jbcrypt.BCrypt;
+import java.sql.*;
+import java.util.Optional;
+
+public class UserDAO {
+
+    public Optional<Usuario> findByEmail(String email) throws SQLException {
+        String sql = "SELECT id, email, password, role FROM users WHERE lower(email)=lower(?)";
+        try (Connection c = Database.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, email);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int id = rs.getInt("id");
+                    String e = rs.getString("email");
+                    String p = rs.getString("password");
+                    String role = rs.getString("role");
+
+                    if ("CLIENTE".equalsIgnoreCase(role))
+                        return Optional.of(new Cliente(id, e, p));
+                    else
+                        return Optional.of(new Corretor(id, e, p));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    public Usuario create(String email, String plainPassword, String role) throws SQLException {
+
+        String hashed = BCrypt.hashpw(plainPassword, BCrypt.gensalt());
+        String sql = "INSERT INTO users(email, password, role) VALUES (?, ?, ?)";
+
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setString(1, email);
+            ps.setString(2, hashed);
+            ps.setString(3, role);
+            ps.executeUpdate();
+
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                rs.next();
+                int id = rs.getInt(1);
+
+                if ("CLIENTE".equalsIgnoreCase(role))
+                    return new Cliente(id, email, hashed);
+                else
+                    return new Corretor(id, email, hashed);
+            }
+        }
+    }
+
+    public Optional<Usuario> authenticate(String email, String plainPassword) throws SQLException {
+        Optional<Usuario> maybe = findByEmail(email);
+        if (maybe.isEmpty()) return Optional.empty();
+        Usuario u = maybe.get();
+
+        if (BCrypt.checkpw(plainPassword, u.getSenha()))
+            return Optional.of(u);
+
+        return Optional.empty();
+    }
+}
