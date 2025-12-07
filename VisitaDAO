@@ -1,0 +1,94 @@
+package javaapplication1.dao;
+
+import javaapplication1.model.Visita;
+import javaapplication1.model.Visita.Status;
+
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class VisitaDAO {
+
+    public Visita create(int clienteId, int imovelId, LocalDateTime dt) throws SQLException {
+        String sql = "INSERT INTO visitas(cliente_id, imovel_id, data_hora, status) VALUES (?, ?, ?, ?)";
+
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setInt(1, clienteId);
+            ps.setInt(2, imovelId);
+            ps.setTimestamp(3, Timestamp.valueOf(dt));
+            ps.setString(4, "PENDENTE");
+
+            ps.executeUpdate();
+
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                rs.next();
+                return new Visita(rs.getInt(1), clienteId, imovelId, dt, Status.PENDENTE);
+            }
+        }
+    }
+
+    public List<Visita> listByCliente(int clienteId) throws SQLException {
+        String sql = "SELECT id, imovel_id, data_hora, status FROM visitas WHERE cliente_id = ? ORDER BY data_hora";
+
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, clienteId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Visita> l = new ArrayList<>();
+                while (rs.next()) {
+                    l.add(new Visita(
+                            rs.getInt("id"),
+                            clienteId,
+                            rs.getInt("imovel_id"),
+                            rs.getTimestamp("data_hora").toLocalDateTime(),
+                            Status.valueOf(rs.getString("status"))
+                    ));
+                }
+                return l;
+            }
+        }
+    }
+
+    public List<Visita> listAll() throws SQLException {
+        String sql = "SELECT id, cliente_id, imovel_id, data_hora, status FROM visitas ORDER BY data_hora";
+
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            List<Visita> l = new ArrayList<>();
+            while (rs.next()) {
+                l.add(new Visita(
+                        rs.getInt("id"),
+                        rs.getInt("cliente_id"),
+                        rs.getInt("imovel_id"),
+                        rs.getTimestamp("data_hora").toLocalDateTime(),
+                        Status.valueOf(rs.getString("status"))
+                ));
+            }
+            return l;
+        }
+    }
+
+    public void updateStatus(int visitaId, Status novo) throws SQLException {
+        String sql = "UPDATE visitas SET status = ? WHERE id = ?";
+        try (Connection c = Database.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, novo.name());
+            ps.setInt(2, visitaId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void delete(int id) throws SQLException {
+        String sql = "DELETE FROM visitas WHERE id = ?";
+        try (Connection c = Database.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+}
