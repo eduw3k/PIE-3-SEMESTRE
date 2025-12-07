@@ -1,0 +1,27 @@
+package javaapplication1.config;
+
+import java.sql.Connection;
+import java.sql.Statement;
+import javaapplication1.dao.Database;
+
+public class DropTables {
+
+    public static void main(String[] args) {
+        try (Connection conn = Database.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            System.out.println("Conectado! Apagando tabelas antigas...");
+
+            stmt.executeUpdate("DROP TABLE IF EXISTS visitas;");
+            stmt.executeUpdate("DROP TABLE IF EXISTS imoveis;");
+            stmt.executeUpdate("DROP TABLE IF EXISTS users;");
+            stmt.executeUpdate("DROP TABLE IF EXISTS usuarios;"); // caso exista tabela antiga
+
+            System.out.println("✔ Tabelas removidas com sucesso!");
+
+        } catch (Exception e) {
+            System.out.println("Erro ao remover tabelas: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
