@@ -1,0 +1,7 @@
+package javaapplication1.model;
+
+public class Corretor extends Usuario {
+    public Corretor() {}
+    public Corretor(int id, String email, String senha){ super(id,email,senha); }
+    @Override public String getTipo(){ return "CORRETOR"; }
+}
